@@ -1,140 +1,148 @@
 import streamlit as st
-import pandas as pd
-import requests
-import random
-from datetime import datetime
 
-# [1] 시스템 설정
+# [1] 페이지 설정 (꽉 찬 화면, 깔끔한 아이콘)
 st.set_page_config(
-    page_title="황금손 로또 분석실",
-    page_icon="💰",
-    layout="centered"
+    page_title="Future Vision | AI Solution",
+    page_icon="🚀",
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# [2] 동행복권 데이터 수집 엔진 (봇 차단 회피 기능 탑재)
-@st.cache_data(ttl=3600)
-def get_lotto_data(start_drw, end_drw):
-    rows = []
-    # 봇 차단 방지용 헤더 (나는 크롬이다!)
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+# [2] 디자인 커스텀 (CSS) - 스트림릿 티 안 나게 만들기
+st.markdown("""
+    <style>
+    /* 상단 헤더 숨기기 */
+    header {visibility: hidden;}
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* 전체 폰트 및 배경 */
+    .stApp {
+        background-color: #ffffff;
+        color: #111111;
+        font-family: 'Helvetica Neue', sans-serif;
     }
     
-    # 에러 나도 멈추지 않고 다음 회차로 넘어가는 안전장치
-    for i in range(end_drw, start_drw - 1, -1):
-        try:
-            url = f"https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo={i}"
-            resp = requests.get(url, headers=headers, timeout=5)
-            
-            # 서버가 정상 응답(200)을 줬는지 확인
-            if resp.status_code == 200:
-                # 여기서 JSON 변환 시도 (아까 터진 곳 방어)
-                try:
-                    data = resp.json()
-                    if data.get("returnValue") == "success":
-                        nums = [data[f"drwtNo{j}"] for j in range(1, 7)]
-                        rows.append({"회차": i, "당첨번호": nums, "보너스": data["bnusNo"], "날짜": data["drwNoDate"]})
-                except ValueError:
-                    continue # JSON 아니면(HTML 에러페이지면) 무시하고 진행
-                    
-        except Exception as e:
-            continue # 연결 에러 나도 쿨하게 무시
-
-    # 만약 데이터를 하나도 못 가져왔을 때를 대비한 비상용 가짜 데이터 (앱 뻗음 방지)
-    if not rows:
-        return pd.DataFrame([
-            {"회차": 1100, "당첨번호": [1, 2, 3, 4, 5, 6], "보너스": 7, "날짜": "데이터 로딩 실패"}
-        ])
-        
-    return pd.DataFrame(rows)
-
-# 최신 회차 계산기 (오늘 날짜 기준)
-def get_latest_drw_no():
-    start_date = datetime(2002, 12, 7)
-    now_date = datetime.now()
-    days = (now_date - start_date).days
-    # 토요일 저녁 8시 45분 전이면 아직 추첨 안 했으므로 -1회차
-    weeks = days // 7 + 1
-    if now_date.weekday() == 5 and now_date.hour < 21: 
-        return weeks - 1
-    return weeks
+    /* 히어로 섹션 (메인 타이틀) 스타일 */
+    .hero-title {
+        font-size: 4.5rem;
+        font-weight: 900;
+        line-height: 1.2;
+        background: -webkit-linear-gradient(45deg, #3b82f6, #8b5cf6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0px;
+    }
+    .hero-subtitle {
+        font-size: 1.5rem;
+        color: #6b7280;
+        margin-bottom: 30px;
+    }
+    
+    /* 카드 디자인 */
+    .feature-card {
+        background-color: #f9fafb;
+        border-radius: 15px;
+        padding: 30px;
+        border: 1px solid #e5e7eb;
+        transition: 0.3s;
+        height: 100%;
+    }
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        border-color: #3b82f6;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 def main():
-    # [스타일] CSS: 공 디자인
-    st.markdown("""
-        <style>
-        .stApp { background-color: #ffffff; }
-        .lotto-ball {
-            display: inline-block; width: 35px; height: 35px; 
-            line-height: 35px; text-align: center; border-radius: 50%;
-            color: white; font-weight: bold; margin: 2px;
-            font-size: 14px;
-            box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
-        }
-        .ball-1 { background-color: #fbc400; } 
-        .ball-2 { background-color: #69c8f2; } 
-        .ball-3 { background-color: #ff7272; } 
-        .ball-4 { background-color: #aaaaaa; } 
-        .ball-5 { background-color: #b0d840; } 
-        </style>
-    """, unsafe_allow_html=True)
-
-    st.title("💰 AI 로또 분석기")
-    st.caption("실시간 동행복권 API 연동 (봇 차단 우회 적용)")
-
-    # 데이터 로딩
-    latest = get_latest_drw_no()
+    # --- 1. 히어로 섹션 (메인 간판) ---
+    c1, c2 = st.columns([1.2, 1])
     
-    with st.spinner("데이터 서버 접속 중..."):
-        # 최근 10회차만 가져옴 (속도 향상)
-        df = get_lotto_data(latest - 10, latest)
-
-    # 탭 구성
-    tab1, tab2 = st.tabs(["⚡ 번호 생성", "📊 최근 결과"])
-
-    with tab1:
-        st.subheader("🏆 이번 주 1등 추천 번호")
-        method = st.radio("분석 방식", ["🔥 핫(Hot) 번호 기반", "⚖️ 밸런스 혼합 추천"])
+    with c1:
+        st.write("##") # 여백
+        st.write("##")
+        st.markdown('<p class="hero-title">NEXT LEVEL<br>DIGITAL EXPERIENCE</p>', unsafe_allow_html=True)
+        st.markdown('<p class="hero-subtitle">우리는 기술의 한계를 넘어 새로운 가능성을 창조합니다.<br>당신의 비즈니스를 위한 완벽한 솔루션을 만나보세요.</p>', unsafe_allow_html=True)
         
-        if st.button("번호 추출하기", use_container_width=True):
-            st.success("분석 완료! 추천 번호입니다.")
-            st.write("---")
-            
-            # 추천 로직
-            all_nums = []
-            for nums in df["당첨번호"]:
-                all_nums.extend(nums)
-            
-            # 5게임 생성
-            for _ in range(5):
-                # 단순 랜덤이 아니라 가중치 적용
-                if "핫" in method:
-                    # 많이 나온 번호 60%, 랜덤 40%
-                    hot_nums = pd.Series(all_nums).value_counts().index[:10].tolist()
-                    base_pool = hot_nums + list(range(1, 46))
-                    lucky = sorted(random.sample(base_pool, 6))
-                else:
-                    lucky = sorted(random.sample(range(1, 46), 6))
+        # 버튼 그룹
+        b1, b2, _ = st.columns([1, 1, 2])
+        with b1:
+            st.button("🚀 시작하기", type="primary", use_container_width=True)
+        with b2:
+            st.button("문의하기", use_container_width=True)
 
-                # 공 출력
-                html = ""
-                for n in lucky:
-                    color = f"ball-{(n-1)//10 + 1}"
-                    html += f'<span class="lotto-ball {color}">{n}</span>'
-                st.markdown(f"<div>{html}</div>", unsafe_allow_html=True)
-                st.write("")
+    with c2:
+        # 그럴싸한 랜덤 IT 이미지 (Unsplash 소스)
+        st.image("https://images.unsplash.com/photo-1550751827-4bd374c3f58b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80", use_column_width=True)
 
-    with tab2:
-        st.subheader("📋 최근 당첨 내역")
-        # 데이터프레임 깔끔하게 출력
-        if not df.empty and "당첨번호" in df.columns:
-            st.dataframe(
-                df[["회차", "날짜", "당첨번호", "보너스"]],
-                hide_index=True,
-                use_container_width=True
-            )
-        else:
-            st.error("데이터를 불러오지 못했습니다.")
+    st.write("---")
+
+    # --- 2. 주요 기능 소개 (3단 레이아웃) ---
+    st.markdown("<h2 style='text-align: center; margin-bottom: 50px;'>Why Choose Us?</h2>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        <div class="feature-card">
+            <h3 style="color:#3b82f6;">⚡ Ultra Fast</h3>
+            <p style="color:#4b5563;">
+                최신 클라우드 기술을 기반으로<br>
+                압도적인 처리 속도를 경험하세요.<br>
+                지연 없는 실시간 데이터 처리.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with col2:
+        st.markdown("""
+        <div class="feature-card">
+            <h3 style="color:#8b5cf6;">🛡️ Secure & Safe</h3>
+            <p style="color:#4b5563;">
+                군사 등급의 암호화 기술로<br>
+                당신의 소중한 데이터를 보호합니다.<br>
+                24시간 보안 모니터링 시스템.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown("""
+        <div class="feature-card">
+            <h3 style="color:#ec4899;">💡 Smart AI</h3>
+            <p style="color:#4b5563;">
+                자체 개발한 인공지능 알고리즘이<br>
+                복잡한 업무를 자동으로 처리합니다.<br>
+                효율성을 극대화하세요.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.write("##")
+    st.write("##")
+
+    # --- 3. 신뢰도 지표 (숫자 강조) ---
+    st.markdown("<h3 style='text-align: center; color: #6b7280;'>TRUSTED BY INNOVATORS</h3>", unsafe_allow_html=True)
+    st.write("##")
+    
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric(label="Active Users", value="120K+", delta="12%")
+    m2.metric(label="Countries", value="54", delta="Global")
+    m3.metric(label="Uptime", value="99.9%", delta="Stable")
+    m4.metric(label="Support", value="24/7", delta="Live")
+
+    st.write("---")
+
+    # --- 4. 하단 푸터 ---
+    f1, f2 = st.columns([3, 1])
+    with f1:
+        st.markdown("### Future Vision Inc.")
+        st.caption("Seoul, Republic of Korea | contact@futurevision.com")
+        st.caption("© 2026 Future Vision Inc. All rights reserved.")
+    with f2:
+        st.selectbox("Language", ["Korean", "English", "Japanese"])
 
 if __name__ == "__main__":
     main()
