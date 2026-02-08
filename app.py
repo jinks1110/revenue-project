@@ -1,94 +1,104 @@
 import streamlit as st
 import pandas as pd
 
-# [1] 시스템 설정 (와이드 모드: 데이터 많이 보여주기 위함)
+# [1] 시스템 설정 (가독성 최우선 화이트 모드)
 st.set_page_config(
-    page_title="J-TECH Parts Finder",
-    page_icon="🔍",
+    page_title="J-TECH 통합 솔루션",
+    page_icon="🏭",
     layout="wide"
 )
 
-# [2] 가짜 데이터베이스 (나중에 엑셀로 관리하면 됨)
-# 현장에서 가장 많이 찾는 커넥터/터미널 예시 데이터
-data = {
+# [2] 데이터베이스 (부품 DB + AWG 규격)
+# 부품 데이터 (예시)
+parts_data = {
     "브랜드": ["MOLEX", "MOLEX", "JST", "JST", "YEONHO", "KET", "TE"],
     "시리즈": ["Mini-Fit Jr", "Micro-Fit", "PH", "XH", "SMH200", "090 II", "AMP Superseal"],
-    "파트넘버(P/N)": ["5557-02R", "43025-0400", "PHR-2", "XHP-2", "SMH200-02", "MG610028", "282080-1"],
-    "설명": ["4.2mm Pitch, 2 Circuit Receptacle", "3.0mm Pitch, 4 Circuit", "2.0mm Pitch Housing", "2.5mm Pitch Housing", "2.00mm Pitch", "Sealed Connector 2P", "1.5 Series Sealed"],
-    "매칭 터미널": ["5556T", "43030", "SPH-002T", "SXH-001T", "YST200", "ST730644", "282110-1"],
-    "피치(mm)": [4.2, 3.0, 2.0, 2.5, 2.0, 2.3, 6.0],
-    "상태": ["재고 보유", "수급 불안", "재고 보유", "재고 보유", "발주 필요", "단종 예정", "재고 보유"]
+    "파트넘버": ["5557-02R", "43025-0400", "PHR-2", "XHP-2", "SMH200-02", "MG610028", "282080-1"],
+    "설명": ["4.2mm Pitch 2P", "3.0mm Pitch 4P", "2.0mm Pitch 2P", "2.5mm Pitch 2P", "2.00mm Pitch", "Sealed 2P", "1.5 Series Sealed"],
+    "매칭터미널": ["5556T", "43030", "SPH-002T", "SXH-001T", "YST200", "ST730644", "282110-1"],
+    "재고상태": ["보유", "부족", "보유", "보유", "발주필요", "단종", "보유"]
 }
-df = pd.DataFrame(data)
+df_parts = pd.DataFrame(parts_data)
+
+# AWG 데이터 (복구됨)
+wire_data = {
+    "AWG 30": {"sq": "0.05", "amp": "불가"},
+    "AWG 28": {"sq": "0.08", "amp": "0.5 A"},
+    "AWG 26": {"sq": "0.13", "amp": "1.5 A"},
+    "AWG 24": {"sq": "0.20", "amp": "2.5 A"},
+    "AWG 22": {"sq": "0.30", "amp": "5 A"},
+    "AWG 20": {"sq": "0.50", "amp": "9 A"},
+    "AWG 18": {"sq": "0.75", "amp": "13 A"},
+    "AWG 16": {"sq": "1.25", "amp": "19 A"},
+    "AWG 14": {"sq": "2.0",  "amp": "27 A"},
+    "AWG 12": {"sq": "3.5",  "amp": "37 A"},
+    "AWG 10": {"sq": "5.5",  "amp": "49 A"},
+    "AWG 8":  {"sq": "8.0",  "amp": "61 A"}
+}
 
 def main():
-    # 사이드바: 기능 전환
-    with st.sidebar:
-        st.title("J-TECH Solutions")
-        mode = st.radio("메뉴 선택", ["🔍 부품 규격 검색", "⚙️ 현장 계산기 (구버전)"])
-        st.info("💡 데이터베이스 업데이트: 2026.02.09")
-        st.write("문의: jtech1110@gmail.com")
+    st.title("🏭 J-TECH 현장 통합 시스템")
+    st.write("부품 검색부터 작업 계산까지 한 번에 해결하세요.")
 
-    if mode == "🔍 부품 규격 검색":
-        # 메인 타이틀: 있어 보이는 검색 엔진 스타일
-        st.markdown("""
-        <h1 style='text-align: center; color: #333;'>⚡ J-TECH Cross-Reference</h1>
-        <p style='text-align: center; color: #666;'>국내외 30,000개 이상의 하네스 부품 데이터베이스 (Demo)</p>
-        """, unsafe_allow_html=True)
+    # [핵심] 기능 통합: 탭으로 '검색'과 '계산기'를 분리하여 둘 다 유지
+    tab_search, tab_calc = st.tabs(["🔍 부품 규격 검색", "⚙️ 현장 계산기 (복구됨)"])
 
-        st.write("---")
-
-        # 검색창 (크고 아름답게)
-        c1, c2, c3 = st.columns([1, 6, 1])
+    # --- 탭 1: 부품 검색 엔진 (신규 아이디어) ---
+    with tab_search:
+        st.subheader("⚡ 하네스 부품 Cross-Reference")
+        
+        c1, c2 = st.columns([3, 1])
+        with c1:
+            search_query = st.text_input("부품명/시리즈 검색", placeholder="예: 5557, PHR, MOLEX")
         with c2:
-            search_query = st.text_input("파트넘버(P/N), 시리즈, 또는 브랜드 검색", placeholder="예: 5557, JST, 2.0mm")
+            st.write("") 
+            st.write("")
+            st.button("검색") # 엔터 쳐도 되지만 버튼도 배치
 
-        # [수익화 포인트] 검색 결과 상단 광고 영역
-        st.markdown('<div style="background:#f0f2f6; padding:15px; text-align:center; border-radius:10px; color:#888; margin: 20px 0;">📢 AD: 커넥터 소량 구매는 OO전자 (클릭)</div>', unsafe_allow_html=True)
+        # [광고 영역] 자연스러운 배치
+        st.info("📢 [광고] 커넥터 소량/샘플 구매는 '제이테크 스토어' (준비중)")
 
-        # 검색 로직
+        # 검색 로직 (에러 방지를 위해 단순화)
         if search_query:
-            # 대소문자 무시하고 검색
-            mask = df.apply(lambda x: x.astype(str).str.contains(search_query, case=False).any(), axis=1)
-            result_df = df[mask]
+            mask = df_parts.apply(lambda x: x.astype(str).str.contains(search_query, case=False).any(), axis=1)
+            result_df = df_parts[mask]
         else:
-            result_df = df # 검색어 없으면 전체 보여줌 (혹은 숨김 가능)
+            result_df = df_parts
 
-        # 결과 테이블 보여주기
+        # 결과 출력 (에러 원인이었던 column_config 제거 -> 기본 표로 변경)
         if not result_df.empty:
-            st.success(f"총 {len(result_df)}건의 부품이 검색되었습니다.")
-            
-            # 스트림릿 내장 데이터프레임 (정렬, 필터링, 전체화면 가능 - 프로페셔널함)
-            st.dataframe(
-                result_df,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "파트넘버(P/N)": st.column_config.TextColumn("Part Number", help="제조사 공식 파트넘버", width="medium"),
-                    "매칭 터미널": st.column_config.TextColumn("Matching Terminal", help="호환되는 터미널 규격", width="medium"),
-                    "상태": st.column_config.StatusColumn("Stock Status", help="현재 수급 상태")
-                }
-            )
+            st.dataframe(result_df, use_container_width=True, hide_index=True)
         else:
-            st.warning("검색 결과가 없습니다. 스펠링을 확인해주세요.")
-            # 검색 결과 없을 때 보여줄 추천 상품 (이것도 광고)
-            st.info("비슷한 규격의 대체품을 찾으시나요? [기술 상담 요청]")
+            st.warning("검색 결과가 없습니다.")
 
-    else:
-        # 아까 만든 계산기 (도구함으로 이동)
-        st.subheader("⚙️ 엔지니어링 도구 모음")
-        tab1, tab2 = st.tabs(["AWG 변환", "절단 계산"])
+    # --- 탭 2: 현장 계산기 (삭제된 기능 완벽 복구) ---
+    with tab_calc:
+        st.subheader("🔧 엔지니어링 실무 도구")
         
-        with tab1:
-            st.write("AWG ↔ SQ 빠른 변환표")
-            st.json({"AWG 24": "0.2sq", "AWG 22": "0.3sq", "AWG 20": "0.5sq"}) # 간단하게 표현
-        
-        with tab2:
-            st.write("케이블 롤 소요량 계산")
-            roll = st.number_input("롤 길이(m)", 300)
-            cut = st.number_input("절단(mm)", 150)
-            if cut > 0:
-                st.metric("예상 수량", f"{int(roll*1000/cut):,} 개")
+        # 내부 탭으로 3가지 기능 정리
+        sub_tab1, sub_tab2, sub_tab3 = st.tabs(["📏 AWG 변환", "✂️ 롤 절단 계산", "⚡ 허용 전류"])
+
+        # 1. AWG 변환
+        with sub_tab1:
+            col1, col2 = st.columns(2)
+            with col1:
+                selected_awg = st.selectbox("AWG 선택", list(wire_data.keys()))
+            with col2:
+                st.metric("변환 결과", f"{wire_data[selected_awg]['sq']} SQ")
+
+        # 2. 롤 절단 계산
+        with sub_tab2:
+            c1, c2 = st.columns(2)
+            roll_len = c1.number_input("롤 길이 (m)", value=300)
+            cut_len = c2.number_input("절단 길이 (mm)", value=150)
+            if cut_len > 0:
+                count = int((roll_len * 1000) / cut_len)
+                st.metric("생산 가능 수량", f"{count:,} 개")
+
+        # 3. 허용 전류표
+        with sub_tab3:
+            st.write("규격별 허용 전류 (참고치)")
+            st.table(pd.DataFrame(wire_data).T[['amp']])
 
 if __name__ == "__main__":
     main()
